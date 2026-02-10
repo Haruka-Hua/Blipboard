@@ -1,7 +1,8 @@
 import socket
 import pyperclip
+import uuid
 
-server_mac = "C8:6E:08:E2:5C:E7" 
+server_mac = ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
 port = 4
 
 # create socket

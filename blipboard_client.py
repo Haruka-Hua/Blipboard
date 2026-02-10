@@ -2,7 +2,8 @@ import socket
 import pyperclip
 import time
 
-target_mac = "C8:6E:08:E2:5C:E7" 
+target_mac = input("Please enter the target server's MAC address: ")
+target_mac.replace('-',':')
 port = 4
 
 client_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
