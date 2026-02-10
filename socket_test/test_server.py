@@ -22,7 +22,7 @@ while True:
         if not data:
             print("Disconnected!")
             break
-        print(f"--- [Server] Received message: {data.decode(encoding='utf-8')} ---")
+        print(f"--- [Server] Received message: ---\n{data.decode(encoding='utf-8')}")
     except KeyboardInterrupt:
         break
     except Exception as e:
