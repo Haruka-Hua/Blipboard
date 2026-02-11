@@ -9,13 +9,14 @@ Blipboard正是一个为此而生的项目。这是一个基于蓝牙的共享�
 这是我的一个编程练习项目，可能存在一些不成熟的代码实现，还望多多指教！
 
 ## 🚀 快速开始
-### 硬件及系统要求
+### Windows
+#### 硬件及系统要求
 支持蓝牙的64位机器，安装了Windows 10/11系统。
-### 安装Python解释器
+#### 安装Python解释器
 你的电脑上需要安装一个Python解释器，最简单快速的方法是去Microft Store上安装一个，这样可以不需要自己配置环境变量。
-### 获取Python脚本
+#### 获取Python脚本
 在仓库页面点击右侧的"Releases"，下载"Source Code (zip)"并解压，在解压后的目录中右键->在终端中打开。
-### 创建虚拟环境
+#### 创建虚拟环境
 第一次使用时，需要创建虚拟环境（如果你不介意你的全局环境变得非常臃肿的话，可以跳过这一步）：
 ```bash
 python -m venv .venv
@@ -24,12 +25,12 @@ python -m venv .venv
 ```bash
 .venv\Scripts\Activate.ps1
 ```
-### 安装依赖项
+#### 安装依赖项
 第一次使用时，需要安装依赖：
 ```bash
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
-### 开始使用
+#### 开始使用
 在两台电脑上都完成这些操作后，你就可以开始使用Blipboard了！你需要选择其中的一台作为server，另一台作为client，并让他们通过蓝牙连接。
 
 在server上，运行`blipboard_server.py`：
@@ -41,22 +42,8 @@ python -m venv .venv
 ```bash
 .venv\Scripts\python.exe blipboard_client.py
 ```
-启动client后，需要手动输入server的MAC地址，你可以在server上打开powershell，通过这个命令来查询：
-```bash
-Get-NetAdapter | Select-Object Name, MacAddress
-```
-你应该会看到类似这样的输出：
-```
-Name         MacAddress
-----         ----------
-LetsTAP      00-11-45-14-19-19
-以太网 3     07-21-00-00-00-0C
-WLAN         C4-6E-39-EA-5C-23
-以太网 2     19-19-81-0C-D5-79
-蓝牙网络连接 44-44-44-44-44-44
-以太网       00-11-AA-BB-CC-44
-```
-在client上输入"蓝牙网络连接"对应的地址即可。
+
+启动client后，需要手动输入server的MAC地址。server启动时会打印出自己的蓝牙地址，直接填写过去即可。
 
 现在你就可以开始使用 **Blipboard** 了，你可以在client上使用热键手动进行剪贴板的同步：
 |热键|功能|
@@ -65,6 +52,58 @@ WLAN         C4-6E-39-EA-5C-23
 |Ctrl+Alt+V|将server的剪贴板同步给client|
 
 在运行窗口中使用Ctrl+C可以退出client或者server。
+
+### Linux
+#### 硬件及系统要求
+支持蓝牙的64位机器，安装了任何可以正常使用的Linux发行版，最好有图形界面，因为目前在终端中使用热键容易发生冲突。
+#### 安装python解释器
+一般来说，debian系的发行版都自带了python，可以用以下命令检测python版本：
+```bash
+python3 --version
+```
+如果没有返回内容，则需要安装python，以apt安装为例：
+```bash
+sudo apt update
+sudo apt install python3
+```
+#### 获取Python脚本
+在仓库页面点击右侧的"Releases"，下载"Source Code"并解压，在解压后的目录中打开终端。
+#### 创建虚拟环境
+第一次使用时，需要创建虚拟环境（如果你不介意你的全局环境变得非常臃肿的话，可以跳过这一步）：
+```bash
+python -m venv .venv
+```
+如果创建了虚拟环境，每次前使用记得激活虚拟环境：
+```bash
+source ./.venv/bin/activate
+```
+#### 安装依赖项
+第一次使用时，需要安装依赖：
+```bash
+pip install -r requirements.txt
+```
+#### 开始使用
+在两台电脑上都完成这些操作后，你就可以开始使用Blipboard了！你需要选择其中的一台作为server，另一台作为client，并让他们通过蓝牙连接。
+
+在server上，运行`blipboard_server.py`：
+```bash
+./.venv/bin/python ./blipboard_server.py
+```
+
+在client上，运行`blipboard_client.py`，因为client使用了全局键盘监听，请确保你能够使用root权限：
+```bash
+sudo ./.venv/bin/python ./blipboard_client.py
+```
+
+启动client后，需要手动输入server的MAC地址。server启动时会打印出自己的蓝牙地址，直接填写过去即可。
+
+现在你就可以开始使用 **Blipboard** 了，你可以在client上使用热键手动进行剪贴板的同步：
+|热键|功能|
+|---|---|
+|Ctrl+Alt+C|将client的剪贴板同步给server|
+|Ctrl+Alt+V|将server的剪贴板同步给client|
+
+在运行终端中使用Ctrl+C可以退出client或者server。
 
 ## 📁 项目结构
 ```
