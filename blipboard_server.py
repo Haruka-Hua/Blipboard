@@ -1,8 +1,10 @@
 import socket
 import pyperclip
 import uuid
+import protocal.protocal
 
 server_mac = ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
+print(f"Server MAC address: {server_mac}")
 port = 4
 
 # create socket
@@ -24,20 +26,36 @@ try:
             client_connected = True
         except socket.timeout:
             continue
+
     # receive data
     client_sock.settimeout(1.0)
     while True:
         try:
-            data = client_sock.recv(4096)
-            if not data:
+            raw_data = client_sock.recv(4096)
+            if not raw_data:
                 print("[Server] Client disconnected.")
                 break
 
-            new_text = data.decode('utf-8')
-            pyperclip.copy(new_text)
-            print("[Server] Clipboard updated.")
+            message = protocal.protocal.unpack_data(raw_data)
+            if message["request"]=="PUSH":
+                # currently this only processes plain text
+                if message["dataType"]=="text":
+                    new_text = message["data"]
+                    pyperclip.copy(new_text)
+                    print("[Server] Clipboard updated.")
+            elif message["request"]=="PULL":
+                print("[Server] Pull request received, pushing clipboard ...")
+                content = pyperclip.paste()
+                packet = protocal.protocal.pack_data(
+                    request="PUSH",
+                    dataType="text",
+                    data=content
+                )
+                client_sock.send(packet)
+                print("[Server] Push success!")
         except socket.timeout:
             continue
+        
 except KeyboardInterrupt:
     print("[Server] Exiting ...")
 except Exception as e:

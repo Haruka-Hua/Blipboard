@@ -1,6 +1,6 @@
 # 📋 Blipboard
 ## 💡 项目说明
-你有没有遇到过这种情况？你正在同时使用两台电脑进行协作，或许其中一台翻墙到外网使用AI，另一台连着校园网正在查文献或者在跟命令行斗智斗勇？这个时候，你或许特别希望两台电脑能够共享同一个剪贴板，这样就可以把文献或者报错贴给AI或者把AI提供的命令贴到命令行？
+你有没有遇到过这种情况？你正在同时使用两台电脑进行协作，或许其中一台翻墙到外网使用AI，另一台连着校园网正在查文献或者在跟命令行斗智斗勇？这个时候，你或许特别希望两台电脑能够共享同一个剪贴板，这样就可以把文献或报错贴给AI，或者把AI提供的命令贴到命令行？
 
 遗憾的是，现在大部分的共享剪贴板项目都依赖同一局域网，这对于正在翻墙的你来说可能不是很好用。有没有一种不需要在同一网络环境下，甚至不需要联网的解决方案呢？
 
@@ -27,7 +27,7 @@ python -m venv .venv
 ### 安装依赖项
 第一次使用时，需要安装依赖：
 ```bash
-pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 ### 开始使用
 在两台电脑上都完成这些操作后，你就可以开始使用Blipboard了！你需要选择其中的一台作为server，另一台作为client，并让他们通过蓝牙连接。
@@ -56,14 +56,24 @@ WLAN         C4-6E-39-EA-5C-23
 蓝牙网络连接 44-44-44-44-44-44
 以太网       00-11-AA-BB-CC-44
 ```
-在client上输入"蓝牙网络连接"对应的地址即可，现在你的server就可以同步client的剪贴板了！
-需要关闭 Blipboard 时在运行client和server的终端按 Ctrl+C 即可。
+在client上输入"蓝牙网络连接"对应的地址即可。
+
+现在你就可以开始使用 **Blipboard** 了，你可以在client上使用热键手动进行剪贴板的同步：
+|热键|功能|
+|---|---|
+|Ctrl+Alt+C|将client的剪贴板同步给server|
+|Ctrl+Alt+V|将server的剪贴板同步给client|
+
+在运行窗口中使用Ctrl+C可以退出client或者server。
 
 ## 📁 项目结构
 ```
 Blipboard/
 ├── blipboard_client.py
 ├── blipboard_server.py
+├── protocol/
+│   ├── protocol.py
+│   └── protocol.md
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -72,6 +82,7 @@ Blipboard/
 ## 📄 版本日志
 |版本|更新时间|更新日志|
 |---|---|---|
+|v0.2|2026/02/11|实现了双向手动传输，通过绑定热键实现|
 |v0.1|2026/02/10|实现了Windows设备之间的通信，server可以同步client的剪贴板，但是只能单向传输，client无法同步server的剪贴板，预计下个版本中完善|
 
 ## 🤝 贡献
