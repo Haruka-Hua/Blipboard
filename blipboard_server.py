@@ -1,7 +1,7 @@
 import socket
 import pyperclip
 import uuid
-import protocal.protocal
+import transmission.transmission
 
 server_mac = ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
 print(f"Server MAC address: {server_mac}")
@@ -31,12 +31,10 @@ try:
     client_sock.settimeout(1.0)
     while True:
         try:
-            raw_data = client_sock.recv(4096)
-            if not raw_data:
+            message = transmission.transmission.recv_data(client_sock)
+            if not message:
                 print("[Server] Client disconnected.")
                 break
-
-            message = protocal.protocal.unpack_data(raw_data)
             if message["request"]=="PUSH":
                 # currently this only processes plain text
                 if message["dataType"]=="text":
@@ -46,12 +44,12 @@ try:
             elif message["request"]=="PULL":
                 print("[Server] Pull request received, pushing clipboard ...")
                 content = pyperclip.paste()
-                packet = protocal.protocal.pack_data(
+                packet = transmission.transmission.pack_data(
                     request="PUSH",
                     dataType="text",
                     data=content
                 )
-                client_sock.send(packet)
+                client_sock.sendall(packet)
                 print("[Server] Push success!")
         except socket.timeout:
             continue

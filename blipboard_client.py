@@ -2,10 +2,10 @@ import socket
 import pyperclip
 import time
 import keyboard
-import protocal.protocal
+import transmission.transmission
 
 server_mac = input("Please enter the target server's MAC address: ")
-server_mac.replace('-',':')
+server_mac = server_mac.replace('-',':')
 port = 4
 
 client_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
@@ -15,6 +15,7 @@ try:
     # connect server
     print("[Client] Connecting...")
     client_sock.connect((server_mac, port))
+    client_sock.settimeout(1.0)
     print("[Client] Connected successfully!")
     print("--- Blipboard Guide ---")
     print("Ctrl + Alt + C : Push local clipboard content to server.")
@@ -29,25 +30,28 @@ try:
             content = pyperclip.paste()
             if content:
                 print("[Client] Pushing clipboard content ...")
-                packet = protocal.protocal.pack_data(
+                packet = transmission.transmission.pack_data(
                     request="PUSH",
                     data=content,
                     dataType="text"
                 )
-                client_sock.send(packet)
+                client_sock.sendall(packet)
                 print("[Client] Push success!")
                 time.sleep(0.5)
         elif keyboard.is_pressed("ctrl+alt+v"):
             # pull req
             print("[Client] Sending pull request ...")
-            packet = protocal.protocal.pack_data(request="PULL")
-            client_sock.send(packet)
-            raw_data = client_sock.recv(4096)
-            if raw_data:
-                message = protocal.protocal.unpack_data(raw_data)
-                if message and message["request"]=="PUSH":
-                    pyperclip.copy(message["data"])
-                    print("[Client] Pull success! Clipboard updated.")
+            packet = transmission.transmission.pack_data(request="PULL")
+            client_sock.sendall(packet)
+            while True:
+                try:
+                    message = transmission.transmission.recv_data(client_sock)
+                    break
+                except socket.timeout:
+                    continue
+            if message and message["request"]=="PUSH":
+                pyperclip.copy(message["data"])
+                print("[Client] Pull success! Clipboard updated.")
             time.sleep(0.5)
         time.sleep(0.01)
 
