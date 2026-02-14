@@ -4,26 +4,20 @@ import time
 import keyboard
 import transmission.transmission
 
-server_mac = input("Please enter the target server's MAC address: ")
-server_mac = server_mac.replace('-',':')
-port = 4
+RECONNECT_DELAY = 3.0
 
-client_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
-print(f"[Client] Trying to connect to {server_mac}")
-
-try:
-    # connect server
-    print("[Client] Connecting...")
-    client_sock.connect((server_mac, port))
+def handle_request(client_sock:socket.socket) -> None:
+    """
+    Send request and synchronize the clipboard.
+    
+    :param client_sock: client socket
+    :type client_sock: socket.socket
+    """
     client_sock.settimeout(1.0)
-    print("[Client] Connected successfully!")
     print("--- Blipboard Guide ---")
     print("Ctrl + Alt + C : Push local clipboard content to server.")
     print("Ctrl + Alt + V : Pull server clipboard content to local.")
     print("Ctrl + C at this window: Exit.")
-
-    # get clipboard content
-    last_content = pyperclip.paste()
     while True:
         if keyboard.is_pressed("ctrl+alt+c"):
             # push req
@@ -49,16 +43,45 @@ try:
                     break
                 except socket.timeout:
                     continue
-            if message and message["request"]=="PUSH":
+            if message is None:
+                return
+            elif message["request"]=="PUSH":
                 pyperclip.copy(message["data"])
                 print("[Client] Pull success! Clipboard updated.")
             time.sleep(0.5)
         time.sleep(0.01)
 
-except KeyboardInterrupt:
-    print("[Client] Exiting ...")
-except Exception as e:
-    print(f"[Client] Error: {e}")
-finally:
-    client_sock.close()
-    print("[Client] Blipboard client closed.")
+
+def run_client() -> None:
+    """
+    Run the client: connect and request.
+    """
+    SERVER_MAC = input("Please enter the target server's MAC address: ")
+    SERVER_MAC = SERVER_MAC.replace('-',':')
+    PORT = 4
+    print(f"[Client] Client started. Target server: {SERVER_MAC}, port: {PORT}.")
+    try:
+        while True:
+            client_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
+            try:
+                client_sock.settimeout(2.0)
+                print("[Client] Trying to connect to server ...")
+                client_sock.connect((SERVER_MAC,PORT))
+                print("[Client] Connected to server!")
+                handle_request(client_sock)
+            except socket.timeout:
+                print(f"[Client] Unable to connect to server. Trying to reconnect after {RECONNECT_DELAY} seconds ...")
+                time.sleep(RECONNECT_DELAY)
+                continue
+            except Exception as e:
+                print(f"[Client] Error: {e} \nTrying to reconnect in {RECONNECT_DELAY} seconds ...")
+                time.sleep(RECONNECT_DELAY)
+                continue
+            finally:
+                client_sock.close()
+    except KeyboardInterrupt:
+            print("[Client] Exiting ...")
+    print("[Client] Client closed.")
+
+if __name__ == "__main__":
+    run_client()

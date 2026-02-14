@@ -1,4 +1,4 @@
-# Protocal for Blipboard
+# Protocol for Blipboard
 
 ## Data structure
 A single message consists of a 4-byte header recording the length of the message, and a dictionary packed to json format that contains the details.

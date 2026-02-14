@@ -3,37 +3,29 @@ import pyperclip
 import uuid
 import transmission.transmission
 
-server_mac = ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
-print(f"Server MAC address: {server_mac}")
-port = 4
+def get_mac() -> str:
+    """
+    Get MAC address for this device.
+    
+    :return: mac address
+    :rtype: str
+    """
+    return ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
 
-# create socket
-server_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
-
-try:
-    # bind and listen
-    server_sock.bind((server_mac,port))
-    server_sock.listen(1)
-    print("[Server] Waiting for connection, enter Ctrl+C to exit.")
-    # connect to client
-    server_sock.settimeout(1.0)
-
-    client_connected = False
-    while not client_connected:
-        try:
-            client_sock, client_address = server_sock.accept()
-            print(f"[Server] Connected to: {client_address}.")
-            client_connected = True
-        except socket.timeout:
-            continue
-
-    # receive data
+def handle_client_session(client_sock:socket.socket) -> None:
+    """
+    Communicate with a connected client.
+    This function ends when the client is disconnected.
+    
+    :param client_sock: client socket
+    :type client_sock: socket.socket
+    """
     client_sock.settimeout(1.0)
     while True:
         try:
             message = transmission.transmission.recv_data(client_sock)
             if not message:
-                print("[Server] Client disconnected.")
+                print("[Server] Client disconnected. Waiting for connection ...")
                 break
             if message["request"]=="PUSH":
                 # currently this only processes plain text
@@ -53,13 +45,45 @@ try:
                 print("[Server] Push success!")
         except socket.timeout:
             continue
-        
-except KeyboardInterrupt:
-    print("[Server] Exiting ...")
-except Exception as e:
-    print(f"[Server] Error: {e}")
-finally:
-    if "client_sock" in locals():
-        client_sock.close()
-    server_sock.close()
-    print("[Server] Server closed!")
+        except ConnectionResetError:
+            print("[Server] Connection forced to reset.")
+            break
+
+def run_server() -> None:
+    """
+    Run the server: listen and connect.
+    """
+    SERVER_MAC = get_mac()
+    print(f"Server MAC address: {SERVER_MAC}")
+    PORT = 4
+    # create socket
+    server_sock = socket.socket(socket.AF_BLUETOOTH,socket.SOCK_STREAM,socket.BTPROTO_RFCOMM)
+    try:
+        # bind and listen
+        server_sock.bind((SERVER_MAC,PORT))
+        server_sock.listen(1)
+        server_sock.settimeout(1.0)
+        print(f"[Server] Service started, listening to port {PORT} ...")
+        print("[Server] Waiting for connection, enter Ctrl+C to exit.")
+        while True:
+            # connect to client
+            try:
+                client_sock, address = server_sock.accept()
+                print(f"[Server] Connected to device {address}.")
+            except socket.timeout:
+                continue
+            # communication
+            try:
+                handle_client_session(client_sock)
+            finally:
+                client_sock.close()         
+    except KeyboardInterrupt:
+        print("[Server] Exiting ...")
+    except Exception as e:
+        print(f"[Server] Error: {e}")
+    finally:
+        server_sock.close()
+        print("[Server] Server closed!")
+
+if __name__=="__main__":
+    run_server()
