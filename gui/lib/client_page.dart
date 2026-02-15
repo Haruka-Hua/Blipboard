@@ -32,17 +32,24 @@ class _ClientPageState extends State<ClientPage> {
 
   void _startClient() async {
     String inputMac = _macController.text;
-    String pythonPath = getPythonPath();
+    String pythonPath = getPythonPath(targetExe: "blipboard_client.exe");
     String workingDir = getWorkingDir();
+    bool isBundledExe = pythonPath.endsWith(".exe") && !pythonPath.contains("python.exe");
+
     setState((){
-      logs.add("Starting python script ...");
-      logs.add("Python Interpreter: $pythonPath");
-      logs.add("Working Directory: $workingDir");
+      logs.add("Starting client ...");
+      logs.add("Path: $pythonPath");
+      logs.add("Working Dir: $workingDir");
     });
     try {
+      // 检查文件是否存在
+      if (!File(pythonPath).existsSync()) {
+        throw Exception("Executable not found: $pythonPath");
+      }
+
       var process = await Process.start(
         pythonPath,
-        ["-u","blipboard_client.py", inputMac],
+        isBundledExe ? [inputMac] : ["-u","blipboard_client.py", inputMac],
         workingDirectory: workingDir,
       );
       setState((){

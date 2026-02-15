@@ -5,6 +5,9 @@ import keyboard
 import transmission.transmission
 import sys
 
+# Disable stdout buffering for packaged executable to ensure GUI receives logs in real-time
+sys.stdout.reconfigure(line_buffering=True)
+
 RECONNECT_DELAY = 3.0
 
 def handle_request(client_sock:socket.socket) -> None:

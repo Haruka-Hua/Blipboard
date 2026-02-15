@@ -4,6 +4,10 @@ import pyperclip
 import uuid
 import transmission.transmission
 import subprocess
+import sys
+
+# Disable stdout buffering for packaged executable to ensure GUI receives logs in real-time
+sys.stdout.reconfigure(line_buffering=True)
 
 def get_mac() -> str:
     """

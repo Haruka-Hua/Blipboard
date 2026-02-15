@@ -30,19 +30,27 @@ class _ServerPageState extends State<ServerPage>{
   }
 
   void _startServer() async {
-    String pythonPath = getPythonPath();
+    String pythonPath = getPythonPath(targetExe: "blipboard_server.exe");
     String workingDir = getWorkingDir();
+    bool isBundledExe = pythonPath.endsWith(".exe") && !pythonPath.contains("python.exe");
+
     setState((){
-      logs.add("Starting python script ...");
-      logs.add("Python Interpreter: $pythonPath");
-      logs.add("Working Directory: $workingDir");
+      logs.add("Starting server ...");
+      logs.add("Path: $pythonPath");
+      logs.add("Working Dir: $workingDir"); // Debug info
     });
     
     try{
+      // 检查文件是否存在
+      if (!File(pythonPath).existsSync()) {
+        throw Exception("Executable not found: $pythonPath");
+      }
+
       var process = await Process.start(
         pythonPath,
-        ["-u","blipboard_server.py"],
+        isBundledExe ? [] : ["-u","blipboard_server.py"],
         workingDirectory: workingDir,
+        runInShell: false, // Explicitly set runInShell
       );
       setState((){
         _activeProcess = process;
