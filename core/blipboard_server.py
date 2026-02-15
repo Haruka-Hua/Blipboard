@@ -1,7 +1,9 @@
+import platform
 import socket
 import pyperclip
 import uuid
 import transmission.transmission
+import subprocess
 
 def get_mac() -> str:
     """
@@ -10,7 +12,16 @@ def get_mac() -> str:
     :return: mac address
     :rtype: str
     """
-    return ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
+    if platform.system()=="Windows":
+        return ':'.join(['{:02X}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,8*6,8)][::-1])
+    else:
+        result = subprocess.check_output(["hciconfig"])
+        mac_address = ""
+        for line in result.decode().split('\n'):
+            if "BD Address" in line:
+                mac_address = line.split()[2]
+                break
+        return mac_address
 
 def handle_client_session(client_sock:socket.socket) -> None:
     """

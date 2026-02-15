@@ -1,4 +1,31 @@
-.venv/
-.vscode/
+# --- Python ---
 __pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# --- IDE / Editors ---
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# --- System ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Temp & Logs ---
+*.log
 tmp/
+temp/
+.env
+

@@ -3,6 +3,7 @@ import pyperclip
 import time
 import keyboard
 import transmission.transmission
+import sys
 
 RECONNECT_DELAY = 3.0
 
@@ -17,7 +18,7 @@ def handle_request(client_sock:socket.socket) -> None:
     print("--- Blipboard Guide ---")
     print("Ctrl + Alt + C : Push local clipboard content to server.")
     print("Ctrl + Alt + V : Pull server clipboard content to local.")
-    print("Ctrl + C at this window: Exit.")
+    print("Ctrl + C at terminal: Exit.")
     while True:
         if keyboard.is_pressed("ctrl+alt+c"):
             # push req
@@ -51,12 +52,18 @@ def handle_request(client_sock:socket.socket) -> None:
             time.sleep(0.5)
         time.sleep(0.01)
 
+def get_mac():
+    if len(sys.argv) > 1:
+        return sys.argv[1]
+    else:
+        return input("Please enter the target server's MAC address: ")
 
 def run_client() -> None:
     """
     Run the client: connect and request.
     """
-    SERVER_MAC = input("Please enter the target server's MAC address: ")
+
+    SERVER_MAC = get_mac()
     SERVER_MAC = SERVER_MAC.replace('-',':')
     PORT = 4
     print(f"[Client] Client started. Target server: {SERVER_MAC}, port: {PORT}.")
@@ -79,8 +86,10 @@ def run_client() -> None:
                 continue
             finally:
                 client_sock.close()
+                print("[Client] Releasing resources ...")
     except KeyboardInterrupt:
-            print("[Client] Exiting ...")
+            print("[Client] Keyboard Interrupt.")
+    print("[Client] Exting ...")
     print("[Client] Client closed.")
 
 if __name__ == "__main__":
