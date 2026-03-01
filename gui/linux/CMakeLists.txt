@@ -121,6 +121,14 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Install the core directory (Python executables/scripts) into the bundle so
+# the GUI can find and run them at runtime. This expects the project's
+# sibling `core/` directory to contain built executables (e.g. via PyInstaller)
+# or scripts. The files will be placed under the bundle's data/core path.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../core"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}/core"
+  COMPONENT Runtime)
+
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

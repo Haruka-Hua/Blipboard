@@ -30,9 +30,9 @@ class _ServerPageState extends State<ServerPage>{
   }
 
   void _startServer() async {
-    String pythonPath = getPythonPath(targetExe: "blipboard_server.exe");
+    String pythonPath = getPythonPath(targetExe: exeName("blipboard_server"));
     String workingDir = getWorkingDir();
-    bool isBundledExe = pythonPath.endsWith(".exe") && !pythonPath.contains("python.exe");
+    bool isBundledExe = isBundledExePath(pythonPath);
 
     setState((){
       logs.add("Starting server ...");
@@ -56,7 +56,7 @@ class _ServerPageState extends State<ServerPage>{
         _activeProcess = process;
         _isServiceRunning = true;
       });
-            process.exitCode.then((code){
+      process.exitCode.then((code){
         setState((){
           _isServiceRunning = false;
           _activeProcess = null;
@@ -149,7 +149,7 @@ class _ServerPageState extends State<ServerPage>{
                     height: 50,
                     child: ElevatedButton.icon(
                       onPressed: _isServiceRunning ? _stopServer : _startServer,
-                      icon: Icon(_isServiceRunning ? Icons.bluetooth_connected : Icons.bluetooth_disabled),
+                      icon: Icon(_isServiceRunning ? Icons.stop : Icons.start),
                       label: Text(_isServiceRunning ? "Stop Server" : "Start Server"),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,

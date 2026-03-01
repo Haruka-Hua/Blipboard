@@ -33,3 +33,25 @@ temp/
 *.zip
 *.tar.gz
 
+# Flutter / Dart
+/.dart_tool/
+/pubspec.lock
+/gui/build/
+
+# Python venv and build outputs
+/core/.venv/
+/core/dist/
+/core/build/
+/core/blipboard_server
+/core/blipboard_client
+/core/*.spec
+
+# AppImage and packaging artifacts
+/AppDir/
+*.AppImage
+/appimagetool*
+/squashfs-root/
+
+# linuxrelease working contents
+/linuxrelease/*
+

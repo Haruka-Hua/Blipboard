@@ -32,9 +32,9 @@ class _ClientPageState extends State<ClientPage> {
 
   void _startClient() async {
     String inputMac = _macController.text;
-    String pythonPath = getPythonPath(targetExe: "blipboard_client.exe");
+    String pythonPath = getPythonPath(targetExe: exeName("blipboard_client"));
     String workingDir = getWorkingDir();
-    bool isBundledExe = pythonPath.endsWith(".exe") && !pythonPath.contains("python.exe");
+    bool isBundledExe = isBundledExePath(pythonPath);
 
     setState((){
       logs.add("Starting client ...");
@@ -51,6 +51,7 @@ class _ClientPageState extends State<ClientPage> {
         pythonPath,
         isBundledExe ? [inputMac] : ["-u","blipboard_client.py", inputMac],
         workingDirectory: workingDir,
+        runInShell: false
       );
       setState((){
         _activeProcess = process;
