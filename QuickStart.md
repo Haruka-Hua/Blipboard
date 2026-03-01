@@ -1,16 +1,16 @@
 # 🚀 快速开始 (Quick Start)
 
-欢迎使用 **Blipboard v1.0**！这是一个基于蓝牙的跨设备剪贴板同步工具。
+欢迎使用 **Blipboard v1.1**！这是一个基于蓝牙的跨设备剪贴板同步工具。
 
 ---
 
 ## 🪟 Windows
 Windows 版本支持图形界面和命令行，无需安装点击即可使用。
 ### 硬件及系统要求
-你的电脑应该安装了蓝牙模块并且确保蓝牙服务打开，建议在 Windows 10/11 下使用，不确定更早的 Windows 是否能够兼容。
+你的电脑应该安装了蓝牙模块并且确保蓝牙服务打开，建议在 Windows 10/11 下使用。
 
 ### 下载 Blipboard
-在仓库页面点击右侧的`Releases`，下载`Blipboard_v1.0_Win.zip`并解压。
+在仓库页面点击右侧的`Releases`，下载`Blipboard_v1.1_Win.zip`并解压。
 
 ### 启动软件
 在解压后的文件夹中，找到并双击 **`Blipboard.exe`**。
@@ -43,53 +43,48 @@ Windows 版本支持图形界面和命令行，无需安装点击即可使用。
 
 ## 🐧 Linux
 
-Linux 版本以源码形式分发，并配备了自动化脚本，让你可以通过简单的命令一键配置和运行。
+Linux 版本现在提供 **GUI (AppImage)** 和 **CLI (命令行)** 两种方式。
 
-### 准备工作
-请确保你的系统已经安装了 `python3` 和 `sudo` 权限，并且拥有蓝牙模块并已启用蓝牙服务。
+### 准备工作 (Dependencies)
+无论使用哪种版本，请确保你的系统安装了以下依赖：
+- `bluez`、`bluez-utils` (用于蓝牙连接)
+- `xclip` 或 `xsel` (用于剪贴板操作)
+- `python3` (CLI 版本需要)
 
-### 下载脚本
-在仓库页面点击右侧的`Releases`，下载`Blipboard_v1.0_Linux.zip`并解压。
-
-### 初始化环境 (首次运行)
-在解压后的文件夹中打开终端，运行以下命令来自动安装依赖：
-
+在 Debian/Ubuntu 系统中，你可以运行：
 ```bash
-# 赋予脚本执行权限
-chmod +x install.sh run_server.sh run_client.sh
-
-# 运行安装脚本 (期间可能需要输入 sudo 密码)
-./install.sh
+sudo apt update && sudo apt install bluez xclip python3
 ```
-
-### 启动软件
-环境配置完成后，你就可以通过脚本启动程序了。
-
-#### 🖥️ 服务端 (Server)
-```bash
-./run_server.sh
-```
-启动后会显示本机的蓝牙 MAC 地址，请复制备用。
-
-#### 💻 客户端 (Client)
-由于客户端需要监听全局键盘事件（用于快捷键），因此启动时需要 `sudo` 权限：
-```bash
-./run_client.sh
-```
-启动后，根据提示输入服务端的 MAC 地址即可。
 
 ---
 
-## 🕹️ 使用方法 (快捷键)
+### 🖥️ 图形界面版 (GUI - AppImage)
+推荐普通用户使用。
+1. 下载 **`Blipboard_v1.1_Linux_GUI.zip`** 并解压。
+2. 赋予 `Blipboard.AppImage` 执行权限：
+   ```bash
+   chmod +x Blipboard.AppImage
+   ```
+3. 双击运行即可。
 
-连接成功后，两台电脑即可通过以下快捷键同步剪贴板：
+*(提示：如果无法启动，请尝试运行 `./install.sh` 来自动安装系统依赖并设置权限)*
 
-| 热键 | 功能 |
-|---|---|
-| **Ctrl + Alt + C** | 将**本机**剪贴板内容发送给对方 (Push) |
-| **Ctrl + Alt + V** | 从**对方**获取剪贴板内容到本机 (Pull) |
+---
 
-*(注意：Client 端必须保持运行才能响应热键)*
+### ⌨️ 命令行版 (CLI - Scripts)
+适用于无桌面环境或希望在后台运行的用户。
+1. 下载 **`Blipboard_v1.1_Linux_CLI.zip`** 并解压。
+2. 赋予脚本执行权限：
+   ```bash
+   chmod +x install.sh run_server.sh run_client.sh
+   ```
+3. **初始化环境** (首次运行)：
+   ```bash
+   ./install.sh
+   ```
+4. **启动软件**：
+   - **服务端**：`./run_server.sh` (显示并复制 MAC 地址)
+   - **客户端**：`sudo ./run_client.sh` (输入服务端 MAC 地址)
 
 ---
 
@@ -98,7 +93,7 @@ chmod +x install.sh run_server.sh run_client.sh
 如果你想直接使用Python源码并进行修改，或者想自己在其他平台运行，请参考以下步骤。
 
 ### 下载 Python 源代码
-在仓库页面点击右侧的`Releases`，下载`Blipboard_v1.0_Raw.zip`并解压。
+在仓库页面点击右侧的`Releases`，下载`Blipboard_v1.1_Raw.zip`并解压。
 
 ### 环境要求
 - Python 3.x 解释器

@@ -8,7 +8,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CORE_DIR = os.path.join(ROOT_DIR, "core")
 GUI_DIR = os.path.join(ROOT_DIR, "gui")
 RELEASE_DIR = os.path.join(ROOT_DIR, "release")
-DIST_DIR = os.path.join(RELEASE_DIR, "Blipboard_v1.0")
+DIST_DIR = os.path.join(RELEASE_DIR, "Blipboard_v1.1_Win")
 
 # 定位虚拟环境的 Python
 if sys.platform == "win32":
@@ -21,7 +21,8 @@ def run_command(command, cwd=None):
     result = subprocess.run(command, shell=True, cwd=cwd)
     if result.returncode != 0:
         print(f"Error: Command failed with exit code {result.returncode}")
-        sys.exit(1)
+        # Not exiting here to allow cleanup to try and continue
+    return result.returncode
 
 def main():
     # 0. 确保虚拟环境 Python 存在
@@ -30,10 +31,20 @@ def main():
         print("Please create it first using: python -m venv .venv (inside core directory)")
         sys.exit(1)
 
+    # 0.5 尝试清理正在运行的进程
+    if sys.platform == "win32":
+        print("Checking for running processes...")
+        subprocess.run("taskkill /F /IM blipboard_server.exe /T", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        subprocess.run("taskkill /F /IM blipboard_client.exe /T", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        subprocess.run("taskkill /F /IM Blipboard.exe /T", shell=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
     # 1. 清理旧的发布目录
-    if os.path.exists(RELEASE_DIR):
-        print("Cleaning old release directory...")
-        shutil.rmtree(RELEASE_DIR)
+    if os.path.exists(DIST_DIR):
+        print(f"Cleaning old release directory: {DIST_DIR}")
+        shutil.rmtree(DIST_DIR)
+    
+    if not os.path.exists(RELEASE_DIR):
+        os.makedirs(RELEASE_DIR)
     os.makedirs(DIST_DIR)
 
     # 2. 打包 Python CLI 版本
@@ -86,7 +97,7 @@ def main():
         shutil.rmtree(py_build_dir)
 
     print(f"\n✅ Release build completed! Check the directory: {DIST_DIR}")
-    print("You can now zip the 'Blipboard_v1.0' folder and distribute it.")
+    print("You can now zip the 'Blipboard_v1.1_Win' folder and distribute it.")
 
 if __name__ == "__main__":
     main()

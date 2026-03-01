@@ -30,6 +30,12 @@ temp/
 .env
 
 # --- Release ---
+/release/*/core/*.exe
+/release/*/data/
+/release/**/*.dll
+/release/**/*.so
+/release/**/*.dat
+/release/Blipboard_v1.1_Win/
 *.zip
 *.tar.gz
 
