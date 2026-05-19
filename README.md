@@ -1,32 +1,27 @@
-# 📋 Blipboard
-## 💡 项目说明
-你有没有遇到过这种情况？你正在同时使用两台电脑进行协作，或许其中一台翻墙到外网使用AI，另一台连着校园网正在查文献或者在跟命令行斗智斗勇？这个时候，你或许特别希望两台电脑能够共享同一个剪贴板，这样就可以把文献和报错贴给AI，或者把AI提供的命令贴到命令行？
+# Blipboard
+## 项目说明
 
-遗憾的是，现在大部分的共享剪贴板项目都依赖同一局域网，这对于正在翻墙的你来说可能不是很好用。有没有一种不需要在同一网络环境下，甚至不需要联网的解决方案呢？
+**Blipboard** 是一个共享剪贴板项目，通过蓝牙实现设备间的剪贴板数据传输，无需设备处于同一局域网环境，且保证了数据安全。该项目适用于内网——外网环境间的设备协作，公共网络环境下数据的安全传输，以及离线环境下的跨设备协作。
 
-Blipboard正是一个为此而生的项目。这是一个基于蓝牙的共享剪贴板项目，只要两台电脑能够通过蓝牙连接，Blipboard就可以工作！
+## 使用方式
 
-这是我的一个编程练习项目，可能存在一些不成熟的代码实现，还望多多指教！
+Blipboard 通过 server-client 模式实现剪贴板共享。在您需要协作的两台设备中，一台作为 **client**， 需要启动相应的 client 程序，主动发送推送和拉取剪贴板请求；另一台作为 **server**，需要启动相应的 server 程序，负责处理 client 发送的请求。
 
-## 🚀 快速开始
-见 **[QuickStart.md](QuickStart.md)**.
+Blipboard 提供了命令行版本和图形界面版本，供您挑选使用。具体使用方式请参考 [快速开始](doc/quickstart/QUICKSTART.md) 。
 
-目前我已经为 Windows 制作了图形界面和免安装环境的命令行版本，打开即可使用。
+其中，命令行版本支持 Windows/Linux/MacOS ，图形界面版本支持 Windows/Linux 。Linux 的图形界面版本对于 server 的支持目前存在一些问题，需要在 Linux 上启动 server 的朋友建议先暂时使用命令行版本。
 
-Linux 端提供了简单的安装脚本和启动脚本，运行脚本即可使用；现在已经更新GUI版本的AppImage，可以参考QuickStart中的教程安装使用。
-
-如果你追求运行效率，或者想要利用源代码做一些定制，也可以下载 Raw 版本使用 Python 源代码。
-
-Mac OS 暂时不支持，因为我没有苹果电脑，你可以自行使用 Python 解释器运行 Raw 版本。
-
-## 📁 项目结构
+## 项目结构
 ```
 Blipboard/
 ├── README.md
 ├── QuickStart.md
 ├── LICENSE
 ├── .gitignore
-├── build_v1.1.py
+├── doc/
+│   └── quickstart/
+│       ├── QUICKSTART.md
+│       └──...
 ├── core/
 │   ├── blipboard_server.py
 │   ├── blipboard_client.py
@@ -45,12 +40,13 @@ Blipboard/
 │   └── ... (multi-platform support)
 ├── release/ (Build artifacts)
 ├── tools/
+│   ├── build_v1.1.py
 │   ├── build_core_pyinstaller.sh
 │   └── make_appimage.sh
 └── tmp/
 ```
 
-## 📄 版本日志
+## 版本日志
 |版本|更新时间|更新日志|
 |---|---|---|
 |v1.1|2026/03/02|完成Linux GUI的制作，修复图标错误，进行打包分发|
@@ -60,7 +56,7 @@ Blipboard/
 |v0.2|2026/02/11|实现了双向手动传输，通过绑定热键实现|
 |v0.1|2026/02/10|实现了Windows设备之间的通信，server可以同步client的剪贴板，但是只能单向传输，client无法同步server的剪贴板，预计下个版本中完善|
 
-## 🤝 贡献
+## 贡献
 欢迎提交 Issue 和 Pull Request！如果你发现任何问题或有改进建议，请：
 1. 查看 [Issues](https://github.com/Haruka-Hua/Blipboard/issues) 是否已有类似问题
 2. 创建新的 Issue 描述问题
