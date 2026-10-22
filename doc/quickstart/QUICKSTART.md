@@ -42,9 +42,9 @@ Linux 版本现在提供 **图形界面 (AppImage)** 和 **命令行 (Scripts)**
 
 ### 准备工作
 无论使用哪种版本，请确保你的系统安装了以下依赖：
-- `bluez`、`bluez-utils` (用于蓝牙连接)
-- `xclip` 或 `xsel` (用于剪贴板操作)
-- `python3` (CLI 版本需要)
+- `bluez`、`bluez-utils`
+- `xclip` 或 `xsel`
+- `python3`
 
 在 Debian/Ubuntu 系统中，你可以运行：
 ```bash

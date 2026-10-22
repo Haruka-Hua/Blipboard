@@ -18,6 +18,8 @@ dist/
 *.iws
 *.ipr
 
+.github
+
 # --- System ---
 .DS_Store
 Thumbs.db
