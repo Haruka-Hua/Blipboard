@@ -52,6 +52,8 @@ temp/
 /core/build/
 /core/blipboard_server
 /core/blipboard_client
+/core/blipboard_server.exe
+/core/blipboard_client.exe
 /core/*.spec
 
 # AppImage and packaging artifacts
@@ -63,3 +65,5 @@ temp/
 # linuxrelease working contents
 /linuxrelease/*
 
+# blipboard configuration files
+config.json

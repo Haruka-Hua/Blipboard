@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "dart:io";
 import "dart:convert";
+import "process_manager.dart";
 import "utils.dart";
 
 class ServerPage extends StatefulWidget {
@@ -15,55 +16,80 @@ class _ServerPageState extends State<ServerPage>{
   List<String> logs = [];
   Process? _activeProcess;
   bool _isServiceRunning = false;
+  bool _isStarting = false;
+  bool _isStopping = false;
+  bool _useRandomPort = false;
   String _localMac = "Unknown";
   final ScrollController _scrollController = ScrollController();
 
-  void _stopServer(){
-    if (_activeProcess != null){
-      _activeProcess!.kill();
-      setState((){
-        _isServiceRunning = false;
-        _activeProcess = null;
-        logs.add("[System] Server process stopped.");
-      });
-    }
+  bool get _isBusy => _isStarting || _isStopping;
+
+  Future<void> _stopServer() async {
+    final process = _activeProcess;
+    if (process == null || _isStopping) return;
+    setState((){
+      _isStopping = true;
+      logs.add("[System] Stopping server ...");
+    });
+    await stopProcessTree(process);
+    if (!mounted) return;
+    setState((){
+      _isStopping = false;
+      _isServiceRunning = false;
+      _activeProcess = null;
+      logs.add("[System] Server process stopped.");
+    });
   }
 
-  void _startServer() async {
+  Future<void> _startServer() async {
+    if (_isServiceRunning || _isBusy) return;
     String pythonPath = getPythonPath(targetExe: exeName("blipboard_server"));
     String workingDir = getWorkingDir();
     bool isBundledExe = isBundledExePath(pythonPath);
 
     setState((){
+      _isStarting = true;
       logs.add("Starting server ...");
       logs.add("Path: $pythonPath");
       logs.add("Working Dir: $workingDir"); // Debug info
     });
-    
+
     try{
       // 检查文件是否存在
       if (!File(pythonPath).existsSync()) {
         throw Exception("Executable not found: $pythonPath");
       }
 
-      var process = await Process.start(
+      final randomPortArgs = _useRandomPort ? ["--random-port"] : <String>[];
+      final process = await startManagedProcess(
         pythonPath,
-        isBundledExe ? [] : ["-u","blipboard_server.py"],
+        isBundledExe
+            ? randomPortArgs
+            : ["-u", "blipboard_server.py", ...randomPortArgs],
         workingDirectory: workingDir,
-        runInShell: false, // Explicitly set runInShell
       );
+      if (!mounted){
+        await stopProcessTree(process);
+        return;
+      }
       setState((){
+        _isStarting = false;
         _activeProcess = process;
         _isServiceRunning = true;
       });
       process.exitCode.then((code){
+        if (!mounted) return;
         setState((){
-          _isServiceRunning = false;
-          _activeProcess = null;
-          logs.add("[System] Python process stopped (code: $code)\n");
+          if (_activeProcess == process){
+            _activeProcess = null;
+            _isServiceRunning = false;
+            _isStopping = false;
+          }
+          logs.add("[System] Python process stopped (code: $code)");
         });
       });
       process.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen((data){
+        if (!mounted) return;
         setState((){
           if(data.contains("Server MAC address:")){
             //todo
@@ -74,20 +100,26 @@ class _ServerPageState extends State<ServerPage>{
         scrollToBottom(_scrollController);
       });
       process.stderr.transform(utf8.decoder).listen((data){
+        if (!mounted) return;
         setState((){
           logs.add("Error: ${data.trim()}");
         });
       });
     } catch(e){
-      logs.add("Failed to start python script, please check path: $e");
+      if (!mounted) return;
+      setState((){
+        _isStarting = false;
+        logs.add("Failed to start python script, please check path: $e");
+      });
     }
   }
 
   @override
   void dispose(){
     _scrollController.dispose();
-    if(_activeProcess!=null){
-      _activeProcess!.kill();
+    final process = _activeProcess;
+    if (process != null){
+      stopProcessTree(process);
     }
     super.dispose();
   }
@@ -140,17 +172,39 @@ class _ServerPageState extends State<ServerPage>{
                     ],
                   ),
                   const Text(
-                    "Start service to detect MAC", 
+                    "Start service to detect MAC",
                     style: TextStyle(fontSize: 16, color: Colors.blueGrey),
                   ),
                   const SizedBox(height: 20),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      "Use a random available port",
+                      style: TextStyle(fontSize: 15),
+                    ),
+                    subtitle: const Text(
+                      "Avoids conflicts when channel 4 is taken. The client must connect to the port shown in the log.",
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    value: _useRandomPort,
+                    onChanged: (_isBusy || _isServiceRunning) ? null : (value){
+                      setState((){
+                        _useRandomPort = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
                   SizedBox(
                     width: 250,
                     height: 50,
                     child: ElevatedButton.icon(
-                      onPressed: _isServiceRunning ? _stopServer : _startServer,
+                      onPressed: _isBusy ? null : (_isServiceRunning ? _stopServer : _startServer),
                       icon: Icon(_isServiceRunning ? Icons.stop : Icons.start),
-                      label: Text(_isServiceRunning ? "Stop Server" : "Start Server"),
+                      label: Text(
+                        _isStopping ? "Stopping ..."
+                        : _isStarting ? "Starting ..."
+                        : _isServiceRunning ? "Stop Server" : "Start Server"
+                      ),
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.white,
                         backgroundColor: _isServiceRunning ? Colors.redAccent : Color(0xff0082fc),

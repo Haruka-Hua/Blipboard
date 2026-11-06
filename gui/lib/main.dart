@@ -1,13 +1,38 @@
 import 'package:flutter/material.dart';
 import 'client_page.dart';
+import 'process_manager.dart';
 import 'server_page.dart';
 
 void main() {
   runApp(const BlipboardApp());
 }
 
-class BlipboardApp extends StatelessWidget {
+class BlipboardApp extends StatefulWidget {
   const BlipboardApp({super.key});
+
+  @override
+  State<BlipboardApp> createState() => _BlipboardAppState();
+}
+
+class _BlipboardAppState extends State<BlipboardApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      killAllSync();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

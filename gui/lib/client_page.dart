@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 import "dart:io";
 import "dart:convert";
+import "address_cache.dart";
+import "process_manager.dart";
 import "utils.dart";
 
 class ClientPage extends StatefulWidget {
@@ -11,32 +13,120 @@ class ClientPage extends StatefulWidget {
 }
 
 class _ClientPageState extends State<ClientPage> {
+  static final RegExp _macPattern = RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$');
+  static const int _defaultPort = 4;
+  static const int _maxRfcommChannel = 30;
+
   final TextEditingController _macController = TextEditingController();
+  final TextEditingController _portController = TextEditingController();
   List<String> logs = [];
   Process? _activeProcess;
   bool _isConnecting = false;
+  bool _isStarting = false;
+  bool _isStopping = false;
+  String? _lastServerMac;
   final ScrollController _scrollController = ScrollController();
 
-  void _stopClient(){
-    if(_activeProcess != null){
-      bool killed = _activeProcess!.kill();
-      if(killed){
-        setState((){
-          _isConnecting = false;
-          _activeProcess = null;
-          logs.add("[System] Client process closed.");
-        });
+  bool get _isBusy => _isStarting || _isStopping;
+
+  /// Commands can only be sent to a running client process.
+  bool get _canSendCommands => _isConnecting && !_isBusy;
+
+  @override
+  void initState(){
+    super.initState();
+    _loadCachedAddress();
+  }
+
+  Future<void> _loadCachedAddress() async {
+    final cached = await AddressCache.loadLastServer();
+    if (cached == null || !_macPattern.hasMatch(cached.mac)) return;
+    if (!mounted) return;
+    setState((){
+      _lastServerMac = cached.mac;
+      if (_portController.text.isEmpty){
+        _portController.text = "${cached.port}";
       }
+    });
+  }
+
+  Future<void> _stopClient() async {
+    final process = _activeProcess;
+    if (process == null || _isStopping) return;
+    setState((){
+      _isStopping = true;
+      logs.add("[System] Stopping client ...");
+    });
+    await stopProcessTree(process);
+    if (!mounted) return;
+    setState((){
+      _isStopping = false;
+      _isConnecting = false;
+      _activeProcess = null;
+      logs.add("[System] Client process closed.");
+    });
+  }
+
+  /// Send a PUSH/PULL command to the running client process via stdin.
+  Future<void> _sendCommand(String command) async {
+    final process = _activeProcess;
+    if (process == null || !_canSendCommands) return;
+    try {
+      process.stdin.writeln(command);
+      await process.stdin.flush();
+    } catch (e) {
+      if (!mounted) return;
+      setState((){
+        logs.add("[System] Failed to send $command command: $e");
+      });
     }
   }
 
-  void _startClient() async {
-    String inputMac = _macController.text;
+  Future<void> _startClient() async {
+    if (_isConnecting || _isBusy) return;
+    final typedMac = _macController.text.trim();
+    final String macToUse;
+    if (typedMac.isEmpty) {
+      // Empty input: fall back to the last connected address, if any.
+      final cached = _lastServerMac;
+      if (cached == null) {
+        setState((){
+          logs.add("No server MAC address entered and no previous address cached. Please enter one (e.g. 00:1A:2B:3C:4D:5E).");
+        });
+        return;
+      }
+      macToUse = cached;
+      setState((){
+        logs.add("[System] No address entered, reusing last connected server: $macToUse");
+      });
+    } else if (!_macPattern.hasMatch(typedMac)) {
+      setState((){
+        logs.add("Please enter a valid server MAC address (e.g. 00:1A:2B:3C:4D:5E).");
+      });
+      return;
+    } else {
+      macToUse = typedMac;
+    }
+    final portText = _portController.text.trim();
+    final int portToUse;
+    if (portText.isEmpty) {
+      portToUse = _defaultPort;
+    } else {
+      final parsed = int.tryParse(portText);
+      if (parsed == null || parsed < 1 || parsed > _maxRfcommChannel) {
+        setState((){
+          logs.add("Server port must be an RFCOMM channel between 1 and $_maxRfcommChannel (leave empty for $_defaultPort).");
+        });
+        return;
+      }
+      portToUse = parsed;
+    }
     String pythonPath = getPythonPath(targetExe: exeName("blipboard_client"));
     String workingDir = getWorkingDir();
     bool isBundledExe = isBundledExePath(pythonPath);
 
     setState((){
+      _isStarting = true;
       logs.add("Starting client ...");
       logs.add("Path: $pythonPath");
       logs.add("Working Dir: $workingDir");
@@ -47,45 +137,66 @@ class _ClientPageState extends State<ClientPage> {
         throw Exception("Executable not found: $pythonPath");
       }
 
-      var process = await Process.start(
+      final portArgs = ["--port", "$portToUse"];
+      final process = await startManagedProcess(
         pythonPath,
-        isBundledExe ? [inputMac] : ["-u","blipboard_client.py", inputMac],
+        isBundledExe
+            ? [macToUse, ...portArgs]
+            : ["-u","blipboard_client.py", macToUse, ...portArgs],
         workingDirectory: workingDir,
-        runInShell: false
       );
+      if (!mounted){
+        await stopProcessTree(process);
+        return;
+      }
       setState((){
+        _isStarting = false;
         _activeProcess = process;
         _isConnecting = true;
+        _lastServerMac = macToUse;
       });
+      await AddressCache.saveLastServer(macToUse, portToUse);
       process.exitCode.then((code){
+        if (!mounted) return;
         setState((){
-          _isConnecting = false;
-          _activeProcess = null;
-          logs.add("[System] Python process stopped (code: $code)\n");
+          if (_activeProcess == process){
+            _activeProcess = null;
+            _isConnecting = false;
+            _isStopping = false;
+          }
+          logs.add("[System] Python process stopped (code: $code)");
         });
       });
       process.stdout.transform(utf8.decoder).listen((data){
+        if (!mounted) return;
         setState((){
           logs.add(data.trim());
         });
         scrollToBottom(_scrollController);
       });
       process.stderr.transform(utf8.decoder).listen((data){
+        if (!mounted) return;
         setState((){
           logs.add("Error: ${data.trim()}");
         });
       });
     } catch(e) {
-      logs.add("Failed to start python script, please check path: $e");
+      if (!mounted) return;
+      setState((){
+        _isStarting = false;
+        logs.add("Failed to start python script, please check path: $e");
+      });
     }
   }
 
   @override
   void dispose(){
     _macController.dispose();
+    _portController.dispose();
     _scrollController.dispose();
-    if(_activeProcess!=null){
-      _activeProcess!.kill();
+    final process = _activeProcess;
+    if (process != null){
+      stopProcessTree(process);
     }
     super.dispose();
   }
@@ -104,32 +215,82 @@ class _ClientPageState extends State<ClientPage> {
         padding: const EdgeInsets.all(30.0),
         child: Column(
           children: [
-            TextField(
-              controller: _macController,
-              decoration: const InputDecoration(
-                labelText: "Server Mac Address",
-                hintText: "e.g. 00:00:00:00:00:00",
-                prefixIcon: Icon(Icons.bluetooth),
-                border: OutlineInputBorder(),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _macController,
+                    decoration: InputDecoration(
+                      labelText: "Server Mac Address",
+                      hintText: "e.g. 00:00:00:00:00:00",
+                      helperText: _lastServerMac != null
+                          ? "Leave empty to reconnect to $_lastServerMac"
+                          : null,
+                      prefixIcon: const Icon(Icons.bluetooth),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 110,
+                  child: TextField(
+                    controller: _portController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Port",
+                      hintText: "Default 4",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height:20),
             SizedBox(
               width: 250,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _isConnecting ? _stopClient : _startClient,
+                onPressed: _isBusy ? null : (_isConnecting ? _stopClient : _startClient),
                 icon: Icon(
                   _isConnecting ? Icons.bluetooth_disabled : Icons.bluetooth_connected
                 ),
                 label: Text(
-                  _isConnecting ?  "Disconnect" : "Connect"
+                  _isStopping ? "Stopping ..."
+                  : _isStarting ? "Starting ..."
+                  : _isConnecting ? "Disconnect" : "Connect"
                 ),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: _isConnecting ? Colors.redAccent : const Color(0xFF0082FC)
                 ),
               ),
+            ),
+            const SizedBox(height:20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _canSendCommands ? () => _sendCommand("PUSH") : null,
+                  icon: const Icon(Icons.north),
+                  label: const Text("Push"),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFF0082FC),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton.icon(
+                  onPressed: _canSendCommands ? () => _sendCommand("PULL") : null,
+                  icon: const Icon(Icons.south),
+                  label: const Text("Pull"),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFF0082FC),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height:20),
             const Text("CLIENT LOG", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),

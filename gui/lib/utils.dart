@@ -55,12 +55,8 @@ String exeName(String base) =>
     Platform.isWindows ? '$base.exe' : base;
 
 bool isBundledExePath(String path){
-  final name = path.split(Platform.pathSeparator).last.toLowerCase();
-  if(Platform.isWindows){
-    return name.endsWith(".exe") && !name.contains("python.exe");
-  } else {
-    return name == "blipbooard_server" || name == "blipboard_client";
-  }
+  final name = p.basenameWithoutExtension(path).toLowerCase();
+  return name == "blipboard_server" || name == "blipboard_client";
 }
 
 void scrollToBottom(ScrollController scrollController){
