@@ -55,13 +55,41 @@ def app_dir() -> str:
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def _write_default_config(path: str) -> None:
+def config_paths() -> list:
+    """
+    Candidate locations for config.json: next to the script/executable first
+    (portable installs), then the per-user config directory (used when the
+    install location is read-only, e.g. a mounted AppImage).
+    """
+    paths = [os.path.join(app_dir(), CONFIG_FILE_NAME)]
+    if sys.platform.startswith("win"):
+        base = os.environ.get("APPDATA")
+        subdir = "Blipboard"
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        subdir = "blipboard"
+    if base:
+        paths.append(os.path.join(base, subdir, CONFIG_FILE_NAME))
+    return paths
+
+
+def _write_default_config(path: str) -> bool:
     try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"hotkeys": DEFAULT_HOTKEYS}, f, indent=2)
             f.write("\n")
+        return True
     except OSError:
-        pass
+        return False
+
+
+def _hotkey_parses(combo: str) -> bool:
+    try:
+        keyboard.parse_hotkey(combo)
+        return True
+    except Exception:
+        return False
 
 
 def load_hotkeys() -> dict:
@@ -70,22 +98,43 @@ def load_hotkeys() -> dict:
     when missing. Anything unreadable or unparsable falls back to defaults.
     """
     hotkeys = dict(DEFAULT_HOTKEYS)
-    path = os.path.join(app_dir(), CONFIG_FILE_NAME)
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            configured = json.load(f).get("hotkeys", {})
-        for action in hotkeys:
-            value = configured.get(action)
-            if isinstance(value, str) and value.strip():
-                hotkeys[action] = value.strip()
-    except FileNotFoundError:
-        _write_default_config(path)
-    except (OSError, ValueError) as e:
-        print(f"[Client] Warning: could not read {CONFIG_FILE_NAME} ({e}), using default hotkeys.")
-    for action, combo in hotkeys.items():
+    content = None
+    source = None
+    for path in config_paths():
         try:
-            keyboard.parse_hotkey(combo)
-        except Exception:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            source = path
+            break
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError) as e:
+            print(f"[Client] Warning: could not read {path} ({e}), trying next location.")
+    if content is None:
+        # First run: create a default config next to the executable when that
+        # directory is writable, otherwise in the per-user config directory.
+        for path in config_paths():
+            if _write_default_config(path):
+                print(f"[Client] Default hotkeys written to {path}.")
+                break
+    else:
+        try:
+            configured = json.loads(content).get("hotkeys", {})
+            for action in hotkeys:
+                value = configured.get(action)
+                if isinstance(value, str) and value.strip():
+                    hotkeys[action] = value.strip()
+        except ValueError as e:
+            print(f"[Client] Warning: invalid JSON in {source} ({e}), using default hotkeys.")
+    if not _hotkey_parses(DEFAULT_HOTKEYS["push"]):
+        # On Linux the keyboard library needs root to build its key tables,
+        # so names cannot be verified at all in this environment. Keep the
+        # configured values; the main loop disables hotkey polling with a
+        # warning if they turn out unusable at runtime.
+        print("[Client] Warning: cannot verify hotkey names in this environment; keeping configured values.")
+        return hotkeys
+    for action, combo in hotkeys.items():
+        if not _hotkey_parses(combo):
             print(f"[Client] Warning: invalid hotkey '{combo}' for {action}, falling back to '{DEFAULT_HOTKEYS[action]}'.")
             hotkeys[action] = DEFAULT_HOTKEYS[action]
     return hotkeys
@@ -173,6 +222,26 @@ def do_pull(client_sock:socket.socket) -> bool:
     return True
 
 
+_hotkeys_disabled = False
+
+
+def _hotkey_pressed(combo: str) -> bool:
+    """
+    keyboard.is_pressed wrapper. Without root on Linux (or with a broken
+    backend) the library raises instead of returning, so on the first failure
+    hotkey polling is disabled for the session; the GUI buttons keep working.
+    """
+    global _hotkeys_disabled
+    if _hotkeys_disabled:
+        return False
+    try:
+        return keyboard.is_pressed(combo)
+    except Exception as e:
+        _hotkeys_disabled = True
+        print(f"[Client] Warning: hotkeys unavailable ({e}); disabled for this session. Use the GUI Push/Pull buttons.")
+        return False
+
+
 def handle_request(client_sock:socket.socket) -> None:
     """
     Send request and synchronize the clipboard. Triggers are the configured
@@ -196,10 +265,10 @@ def handle_request(client_sock:socket.socket) -> None:
             if not do_pull(client_sock):
                 return
             wait_or_stop(0.5)
-        elif keyboard.is_pressed(HOTKEYS["push"]):
+        elif _hotkey_pressed(HOTKEYS["push"]):
             do_push(client_sock)
             wait_or_stop(0.5)
-        elif keyboard.is_pressed(HOTKEYS["pull"]):
+        elif _hotkey_pressed(HOTKEYS["pull"]):
             if not do_pull(client_sock):
                 return
             wait_or_stop(0.5)
